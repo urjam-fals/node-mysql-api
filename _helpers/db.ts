@@ -17,6 +17,16 @@ type FileConfig = {
     };
 };
 
+type DatabaseConfig = {
+    host: string;
+    port: number;
+    user: string;
+    password?: string;
+    database: string;
+    ssl: boolean;
+};
+
+
 function loadFileConfig(): FileConfig {
 
     try {
@@ -43,12 +53,8 @@ const fileConfig: FileConfig =
 const databaseConfig =
     fileConfig.database || {};
 
-const db: any = {};
-export default db;
+function getDatabaseConfig(): DatabaseConfig {
 
-initialize();
-
-async function initialize() {
     const host =
         process.env.DB_HOST ||
         databaseConfig.host;
@@ -72,7 +78,31 @@ async function initialize() {
 
     const ssl =
         process.env.DB_SSL === 'true';
-    
+
+    if (!host || !user || !database) {
+        throw new Error(
+            'Database configuration is incomplete'
+        );
+    }
+
+    return {
+        host,
+        port,
+        user,
+        password,
+        database,
+        ssl
+    };
+}
+
+const db: any = {};
+export default db;
+
+initialize();
+
+async function initialize() {
+    const { host, port, user, password, database, ssl } = getDatabaseConfig();
+
     if (!host || !user || !database) {
         throw new Error(
             'Database configuration is incomplete'
