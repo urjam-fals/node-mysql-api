@@ -1,31 +1,77 @@
-import { expressjwt } from 'express-jwt';
+import { expressjwt as jwt } from 'express-jwt';
+import fs from 'fs';
+import path from 'path';
+
 import db from '../_helpers/db';
-import config from '../config.json';
 
-const {secret} = config;
+type FileConfig = {
+    secret?: string;
+};
 
-export default function authorize(roles: any = []){
+function loadFileConfig(): FileConfig {
+    try {
+        const configPath = path.join(__dirname, '../config.json');
+        const raw = fs.readFileSync(configPath, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return {};
+    }
+}
+
+const fileConfig: FileConfig =
+    process.env.NODE_ENV === 'production'
+        ? {}
+        : loadFileConfig();
+
+const secret =
+    process.env.JWT_SECRET || fileConfig.secret;
+
+if (!secret) {
+    throw new Error('JWT secret is required');
+}
+
+if (
+    process.env.NODE_ENV === 'production' &&
+    !process.env.JWT_SECRET
+) {
+    throw new Error(
+        'JWT_SECRET environment variable is required in production'
+    );
+}
+
+export default function authorize(roles: any = []) {
+
     if (typeof roles === 'string') {
         roles = [roles];
     }
 
     return [
-        expressjwt({ secret, algorithms: ['HS256'] }),
+        jwt({ secret, algorithms: ['HS256'], requestProperty: 'user' }),
 
         async (req: any, res: any, next: any) => {
-            if (!req.auth) {
-                return res.status(401).json({ message: 'Invalid or missing token' });
+
+            const account =
+                await db.Account.findByPk(req.user.id);
+
+            if (
+                !account ||
+                (roles.length &&
+                    !roles.includes(account.role))
+            ) {
+                return res.status(401).json({
+                    message: 'Unauthorized'
+                });
             }
 
-            const account = await db.Account.findByPk(req.auth.sub);
+            req.user.role = account.role;
 
-            if (!account || (roles.length && !roles.includes(account.role))) {
-                return res.status(401).json({ message: 'Unauthorized' });
-            }
+            const refreshTokens =
+                await account.getRefreshTokens();
 
-            // Assign the full Sequelize model instance so that instance methods
-            // like ownsToken() are available on req.user in controllers
-            req.user = account;
+            req.user.ownsToken = (token: any) =>
+                !refreshTokens.find(
+                    (x: any) => x.token === token
+                );
 
             next();
         }
