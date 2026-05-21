@@ -106,7 +106,7 @@ export default async function sendEmail({
 }: any) {
 
     const hasResend =
-        !!process.env.RESEND_API_KEY;
+        !!process.env;
 
     if (hasResend) {
 
