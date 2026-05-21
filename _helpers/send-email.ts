@@ -87,6 +87,17 @@ function getEmailFrom() {
     );
 }
 
+async function sendWithResend({
+    to,
+    subject,
+    html,
+    from
+}: any) {
+
+    // placeholder for future Resend support
+    throw new Error('Resend API not implemented');
+}
+
 export default async function sendEmail({
     to,
     subject,
@@ -94,13 +105,26 @@ export default async function sendEmail({
     from = getEmailFrom()
 }: any) {
 
+    const hasResend =
+        !!process.env.RESEND_API_KEY;
+
+    if (hasResend) {
+
+        return await sendWithResend({
+            to,
+            subject,
+            html,
+            from
+        });
+    }
+
     const transporter =
         nodemailer.createTransport(
             getSmtpOptions()
         );
 
     await transporter.sendMail({
-        from,
+        from: from || getEmailFrom(),
         to,
         subject,
         html
