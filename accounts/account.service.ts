@@ -1,11 +1,53 @@
-import config from '../config.json';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 import { Op } from 'sequelize';
+
 import sendEmail from '../_helpers/send-email';
 import db from '../_helpers/db';
 import Role from '../_helpers/role';
+
+type FileConfig = {
+    secret?: string;
+};
+
+function loadFileConfig(): FileConfig {
+    try {
+        const configPath = path.join(__dirname, '../config.json');
+        const raw = fs.readFileSync(configPath, 'utf8');
+        return JSON.parse(raw);
+    } catch {
+        return {};
+    }
+}
+
+const fileConfig: FileConfig =
+    process.env.NODE_ENV === 'production'
+        ? {}
+        : loadFileConfig();
+
+function getJwtSecret() {
+
+    if (
+        process.env.NODE_ENV === 'production' &&
+        !process.env.JWT_SECRET
+    ) {
+        throw 'JWT_SECRET environment variable is required in production';
+    }
+
+    const secret =
+        process.env.JWT_SECRET ||
+        fileConfig.secret;
+
+    if (!secret) {
+        throw 'JWT secret is missing';
+    }
+
+    return secret;
+}
 
 // menu of functions
 export default {
@@ -203,7 +245,11 @@ async function hash(password: any) {
 }
 
 function generateJwtToken(account: any) {
-    return jwt.sign({ sub: account.id, id: account.id }, config.secret, { expiresIn: '15m' });
+    return jwt.sign(
+        { sub: account.id, id: account.id },
+        getJwtSecret(),
+        { expiresIn: '15m' }
+    );
 }
 
 function generateRefreshToken(account: any, ipAddress: any) {
