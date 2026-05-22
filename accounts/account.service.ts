@@ -117,7 +117,6 @@ async function revokeToken({ token, ipAddress, userId }: any) {
     await refreshToken.save();
 }
 
-// 🚀 ADDED: Fixed and pre-verified registration logic
 async function register(params: any, origin: any) {
     if (await db.Account.findOne({ where: { email: params.email } })) {
         throw 'Email "' + params.email + '" is already registered';
@@ -128,13 +127,16 @@ async function register(params: any, origin: any) {
     const isFirstAccount = (await db.Account.count()) === 0;
     account.role = isFirstAccount ? Role.Admin : Role.User;
     
-    // Auto-verify account right away to bypass missing email APIs
-    account.verified = Date.now();
-    account.verificationToken = null;
+    // 1. Generate a real token and keep 'verified' as NULL initially
+    account.verificationToken = randomTokenString();
+    account.verified = null; 
 
     account.passwordHash = await hash(params.password);
 
     await account.save();
+
+    // 2. Turn the verification email back on! 
+    await sendVerificationEmail(account, origin);
 }
 
 async function verifyEmail({ token }: any) {

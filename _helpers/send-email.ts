@@ -4,13 +4,10 @@ import nodemailer from 'nodemailer';
 
 type FileConfig = {
     emailFrom?: string;
-
     smtpOptions?: {
         host: string;
         port: number;
-
         secure?: boolean;
-
         auth?: {
             user: string;
             pass: string;
@@ -19,19 +16,11 @@ type FileConfig = {
 };
 
 function loadFileConfig(): FileConfig {
-
     try {
-
-        const configPath =
-            path.join(__dirname, '../config.json');
-
-        const raw =
-            fs.readFileSync(configPath, 'utf8');
-
+        const configPath = path.join(__dirname, '../config.json');
+        const raw = fs.readFileSync(configPath, 'utf8');
         return JSON.parse(raw);
-
     } catch {
-
         return {};
     }
 }
@@ -42,7 +31,6 @@ const fileConfig: FileConfig =
         : loadFileConfig();
 
 function getSmtpOptions() {
-
     if (
         process.env.NODE_ENV === 'production' &&
         !process.env.SMTP_HOST
@@ -53,17 +41,12 @@ function getSmtpOptions() {
     }
 
     if (process.env.SMTP_HOST) {
-
         return {
             host: process.env.SMTP_HOST,
-
             port: process.env.SMTP_PORT
                 ? parseInt(process.env.SMTP_PORT, 10)
                 : 587,
-
-            secure:
-                process.env.SMTP_SECURE === 'true',
-
+            secure: process.env.SMTP_SECURE === 'true',
             auth: {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS
@@ -79,23 +62,11 @@ function getSmtpOptions() {
 }
 
 function getEmailFrom() {
-
     return (
         process.env.EMAIL_FROM ||
         fileConfig.emailFrom ||
         'no-reply@example.com'
     );
-}
-
-async function sendWithResend({
-    to,
-    subject,
-    html,
-    from
-}: any) {
-
-    // placeholder for future Resend support
-    throw new Error('Resend API not implemented');
 }
 
 export default async function sendEmail({
@@ -105,23 +76,10 @@ export default async function sendEmail({
     from = getEmailFrom()
 }: any) {
 
-    const hasResend =
-        !!process.env;
-
-    if (hasResend) {
-
-        return await sendWithResend({
-            to,
-            subject,
-            html,
-            from
-        });
-    }
-
-    const transporter =
-        nodemailer.createTransport(
-            getSmtpOptions()
-        );
+    // Cleaned up: Removed the broken resend interceptor completely
+    const transporter = nodemailer.createTransport(
+        getSmtpOptions()
+    );
 
     await transporter.sendMail({
         from: from || getEmailFrom(),
@@ -130,9 +88,3 @@ export default async function sendEmail({
         html
     });
 }
-/*
-    This helper does 3 things:
-    1. Connects to your email provider
-    2. Prepares the email details
-    3. Sends the email
-*/
