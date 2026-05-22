@@ -158,13 +158,10 @@ async function forgotPassword({ email }: any, origin: any) {
     account.resetTokenExpires = new Date(Date.now() + 24*60*60*1000);
     await account.save();
 
-    // Safe logging to Render logs for local/UI testing
-    console.log(`[TESTING] Reset URL: ${origin}/account/reset-password?token=${account.resetToken}`);
 
-    // Commented out to prevent emailing architecture crashes
-    /*
+    
     await sendPasswordResetEmail(account, origin);
-    */
+    
 }
 
 async function validateResetToken({ token }: any) {
